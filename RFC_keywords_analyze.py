@@ -135,3 +135,5 @@ end_year_slide.on_changed(end_change)
 plt.connect('button_press_event', plt1_on_click)
 update()
 plt.show()
+
+conn.close()
