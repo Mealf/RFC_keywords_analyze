@@ -1,4 +1,3 @@
-from cProfile import label
 import pyodbc
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -8,6 +7,7 @@ from matplotlib.widgets import Slider, Button
 import warnings
 
 warnings.filterwarnings('ignore')
+remove_kws = []
 
 def plt1_on_click(event):
     if event.button is MouseButton.LEFT and event.inaxes in axes:
@@ -23,16 +23,32 @@ def plt1_on_click(event):
 
         if event.inaxes in axes:
             update()
+    
+    if event.button is MouseButton.RIGHT and event.inaxes == axes[0]:
+        lbls = event.inaxes.get_xticklabels()
+        idx = int(event.xdata.round())
+        remove_kw = lbls[idx].get_text()
+        remove_kws.append(remove_kw)
+        with open("removed_keyword.txt", 'a', encoding='utf-8') as f:
+            f.write(f'{remove_kw}\n')
+        update()
             
 
 def bar_show_val(ax):
     for p in ax.patches:
         ax.annotate(str(p.get_height()), (p.get_x() * 1.005, p.get_height() * 1.005))
 
-    
+def read_remove_keywords():
+    remove_kws.clear()
+    with open('removed_keyword.txt', 'r', encoding='utf-8') as f:
+        kws = f.readlines()
+        for kw in kws:
+            remove_kws.append(kw)
 
 conString = r'DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=./IETF.accdb;'
 conn = pyodbc.connect(conString)
+
+read_remove_keywords()
 
 fig, axes = plt.subplots(nrows=1, ncols=4)
 kw = ''
@@ -90,6 +106,7 @@ end_year_slide = Slider(
 
 def update():
     kw_group = pd.read_sql_query(sql1, conn, params=[start_year, end_year])
+    kw_group = kw_group[~kw_group['keyword'].isin(remove_kws)]
     kw_group = kw_group.head(10)
     axes[0].cla()
     kw_group.plot.bar(x='keyword', y='RFCs', ax=axes[0], title=f'{start_year}~{end_year}')
